@@ -20,7 +20,7 @@ class UserController {
             return res.status(200).json({
                 message: 'Profile updated successfully',
                 user: {
-                    id: user?._id,
+                    _id: user?._id,
                     username: user?.username,
                     displayName: user?.displayName,
                     about: user?.about,

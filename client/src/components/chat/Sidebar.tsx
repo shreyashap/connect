@@ -117,9 +117,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectChat, selectedChatId }
                         </p>
                         {searchResults.map((result) => (
                             <div
-                                key={result.id}
+                                key={result._id}
                                 className="flex cursor-pointer items-center space-x-3 rounded-lg p-3 transition-colors hover:bg-zinc-800"
-                                onClick={() => startChat(result.id)}
+                                onClick={() => startChat(result._id)}
                             >
                                 <Avatar className="h-10 w-10 border border-zinc-700">
                                     <AvatarImage src={result.avatar} />
@@ -141,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onSelectChat, selectedChatId }
                             Recent Chats
                         </p>
                         {chats.map((chat) => {
-                            const otherUser = chat.participants.find((p) => p.id !== user?.id);
+                            const otherUser = chat.participants.find((p) => p._id !== user?._id);
                             return (
                                 <div
                                     key={chat._id}

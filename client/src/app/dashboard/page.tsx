@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Sidebar } from '@/components/chat/Sidebar';
+import { ChatWindow } from '@/components/chat/ChatWindow';
 import { Chat } from '@/types';
 import { MessageCircle } from 'lucide-react';
 
@@ -17,10 +18,7 @@ export default function DashboardPage() {
 
             <main className="flex-1 flex flex-col min-w-0 bg-zinc-950">
                 {selectedChat ? (
-                    <div className="flex h-full w-full items-center justify-center text-zinc-500">
-                        {/* ChatWindow component will go here in the next chunk */}
-                        <p>Chat with {selectedChat.participants[0].displayName} coming soon...</p>
-                    </div>
+                    <ChatWindow chat={selectedChat} />
                 ) : (
                     <div className="flex flex-col h-full w-full items-center justify-center text-zinc-500">
                         <div className="bg-zinc-900 p-6 rounded-full mb-4">
