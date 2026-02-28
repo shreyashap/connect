@@ -12,6 +12,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>;
     register: (data: any) => Promise<void>;
     logout: () => void;
+    setUser: (user: User | null) => void;
     isAuthenticated: boolean;
 }
 
@@ -29,7 +30,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (storedToken && storedUser) {
             setToken(storedToken);
-            setUser(JSON.parse(storedUser));
+            const parsedUser = JSON.parse(storedUser);
+            // Ensure _id is set if only id exists (backward compatibility)
+            if (parsedUser && !parsedUser._id && parsedUser.id) {
+                parsedUser._id = parsedUser.id;
+            }
+            setUser(parsedUser);
         }
         setLoading(false);
     }, []);
@@ -41,9 +47,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const { user, token } = res.data;
 
             setToken(token);
-            setUser(user);
+            // Standardize on _id
+            const standardizedUser = { ...user, _id: user._id || user.id };
+            setUser(standardizedUser);
             localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(user));
+            localStorage.setItem('user', JSON.stringify(standardizedUser));
 
             router.push('/dashboard');
         } catch (error) {
@@ -60,9 +68,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const { user, token } = res.data;
 
             setToken(token);
-            setUser(user);
+            // Standardize on _id
+            const standardizedUser = { ...user, _id: user._id || user.id };
+            setUser(standardizedUser);
             localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(user));
+            localStorage.setItem('user', JSON.stringify(standardizedUser));
 
             router.push('/dashboard');
         } catch (error) {
@@ -89,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 login,
                 register,
                 logout,
+                setUser,
                 isAuthenticated: !!token,
             }}
         >

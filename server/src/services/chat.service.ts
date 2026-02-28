@@ -8,8 +8,16 @@ class ChatService {
         return await chatRepository.findOrCreateChat(participant1, participant2);
     }
 
-    async getUserChats(userId: string): Promise<IChat[]> {
-        return await chatRepository.getUserChats(userId);
+    async getUserChats(userId: string): Promise<any[]> {
+        const chats = await chatRepository.getUserChats(userId);
+        const chatsWithUnread = await Promise.all(chats.map(async (chat) => {
+            const unreadCount = await messageRepository.countUnreadMessages(chat._id.toString(), userId);
+            return {
+                ...chat.toObject(),
+                unreadCount
+            };
+        }));
+        return chatsWithUnread;
     }
 
     async sendMessage(chatId: string, senderId: string, receiverId: string, content: string, type: MessageType = MessageType.TEXT): Promise<IMessage> {

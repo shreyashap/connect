@@ -36,6 +36,14 @@ class MessageRepository {
             { isRead: true, readAt: new Date() }
         );
     }
+
+    async countUnreadMessages(chatId: string, receiverId: string): Promise<number> {
+        return await Message.countDocuments({
+            chatId: new mongoose.Types.ObjectId(chatId),
+            receiverId: new mongoose.Types.ObjectId(receiverId),
+            isRead: false
+        });
+    }
 }
 
 export default new MessageRepository();

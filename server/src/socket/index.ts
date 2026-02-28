@@ -9,7 +9,18 @@ interface ExtendedWebSocket extends WebSocket {
     isAlive?: boolean;
 }
 
-const clients: Map<string, ExtendedWebSocket> = new Map();
+const clients: Map<string, Set<ExtendedWebSocket>> = new Map();
+
+const sendToUser = (userId: string, data: string) => {
+    const userSockets = clients.get(userId);
+    if (userSockets) {
+        userSockets.forEach(ws => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(data);
+            }
+        });
+    }
+};
 
 const broadcastPresence = (wss: WebSocketServer, userId: string, isOnline: boolean) => {
     const presenceUpdate = JSON.stringify({
@@ -32,7 +43,10 @@ const handleAuth = async (ws: ExtendedWebSocket, wss: WebSocketServer, token: st
     }
 
     ws.userId = decoded.id;
-    clients.set(decoded.id, ws);
+    if (!clients.has(decoded.id)) {
+        clients.set(decoded.id, new Set());
+    }
+    clients.get(decoded.id)!.add(ws);
 
     await userService.updatePresence(decoded.id, true);
     broadcastPresence(wss, decoded.id, true);
@@ -51,33 +65,30 @@ const handleSendMessage = async (senderId: string, payload: any) => {
         type || MessageType.TEXT
     );
 
-    const recipientWs = clients.get(receiverId);
-    if (recipientWs) {
-        recipientWs.send(JSON.stringify({
-            type: 'new_message',
-            payload: message
-        }));
-    }
+    const messageData = JSON.stringify({
+        type: 'new_message',
+        payload: message
+    });
 
-    const senderWs = clients.get(senderId);
-    if (senderWs) {
-        senderWs.send(JSON.stringify({
-            type: 'message_sent',
-            payload: message
-        }));
-    }
+    sendToUser(receiverId, messageData);
+
+    const confirmationData = JSON.stringify({
+        type: 'message_sent',
+        payload: message
+    });
+
+    sendToUser(senderId, confirmationData);
 };
 
 const handleTyping = (userId: string, payload: any) => {
     const { receiverId, isTyping, chatId } = payload;
-    const recipientWs = clients.get(receiverId);
 
-    if (recipientWs) {
-        recipientWs.send(JSON.stringify({
-            type: 'typing_status',
-            payload: { userId, isTyping, chatId }
-        }));
-    }
+    const typingUpdate = JSON.stringify({
+        type: 'typing_status',
+        payload: { userId, isTyping, chatId }
+    });
+
+    sendToUser(receiverId, typingUpdate);
 };
 
 const handleReadMessages = async (userId: string, payload: any) => {
@@ -85,13 +96,12 @@ const handleReadMessages = async (userId: string, payload: any) => {
 
     await chatService.markMessagesAsRead(chatId, userId);
 
-    const senderWs = clients.get(senderId);
-    if (senderWs) {
-        senderWs.send(JSON.stringify({
-            type: 'messages_read',
-            payload: { chatId, readerId: userId }
-        }));
-    }
+    const readUpdate = JSON.stringify({
+        type: 'messages_read',
+        payload: { chatId, readerId: userId }
+    });
+
+    sendToUser(senderId, readUpdate);
 };
 
 const handleIncomingMessage = async (ws: ExtendedWebSocket, wss: WebSocketServer, data: any) => {
@@ -143,9 +153,15 @@ export const initSocket = (wss: WebSocketServer) => {
 
         ws.on('close', async () => {
             if (ws.userId) {
-                clients.delete(ws.userId);
-                await userService.updatePresence(ws.userId, false);
-                broadcastPresence(wss, ws.userId, false);
+                const userSockets = clients.get(ws.userId);
+                if (userSockets) {
+                    userSockets.delete(ws);
+                    if (userSockets.size === 0) {
+                        clients.delete(ws.userId);
+                        await userService.updatePresence(ws.userId, false);
+                        broadcastPresence(wss, ws.userId, false);
+                    }
+                }
             }
             console.log('WebSocket connection closed');
         });
